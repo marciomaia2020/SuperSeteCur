@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados Super 7</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .result-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .grid-display {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .column-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #cccccc;
+            color: #333;
+            margin: 2px 0;
+        }
+
+        .cell.highlight {
+            background-color: #209869;
+            color: white;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #209869;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            background-color: #1a7d57;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-section">
+            <h2>Resultados da Super 7</h2>
+            <div>
+                <label>Concurso:</label>
+                <input type="number" id="concursoInput" placeholder="Nº do concurso">
+                <button onclick="buscarResultado()" id="searchButton">Buscar Resultado</button>
+            </div>
+            <div id="loading" class="loading">Buscando resultado...</div>
+        </div>
+
+        <!-- Resultados serão exibidos logo abaixo do botão -->
+        <div id="resultInfo" class="result-info" style="display: none;">
+            <h3>Resultado do Concurso <span id="concursoNumero"></span></h3>
+            <div id="resultadoConcursos" class="grid-display"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para buscar o resultado de um concurso específico
+        async function buscarResultado() {
+            const concursoInput = document.getElementById('concursoInput');
+            const concurso = concursoInput.value;
+            const loading = document.getElementById('loading');
+            const resultInfo = document.getElementById('resultInfo');
+            const gridDisplay = document.getElementById('resultadoConcursos');
+
+            // Limpa os resultados anteriores e exibe o carregamento
+            loading.classList.add('active');
+            resultInfo.style.display = 'none';
+            gridDisplay.innerHTML = '';
+
+            try {
+                // URL base para a API da Super 7
+                const baseUrl = 'https://loteriascaixa-api.herokuapp.com/api';
+                const url = concurso 
+                    ? `${baseUrl}/supersete/${concurso}`
+                    : `${baseUrl}/supersete/latest`; // Carrega o último concurso se nenhum for informado
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error('Não foi possível encontrar o resultado deste concurso');
+                }
+
+                const data = await response.json();
+
+                // Verificar se os dados da API têm as dezenas
+                if (!data.dezenas || data.dezenas.length !== 7) {
+                    throw new Error('Resultado inválido ou incompleto.');
+                }
+
+                // Exibe o número do concurso
+                document.getElementById('concursoNumero').textContent = data.concurso;
+
+                // Exibe o resultado do concurso
+                gridDisplay.innerHTML = ''; // Limpa a grid anterior
+
+                // Exibe os números sorteados para cada coluna
+                for (let coluna = 0; coluna < 7; coluna++) {
+                    const columnDiv = document.createElement('div');
+                    columnDiv.classList.add('column');
+
+                    // Cabeçalho da coluna
+                    const columnHeader = document.createElement('div');
+                    columnHeader.textContent = `Coluna ${coluna + 1}`;
+                    columnHeader.classList.add('column-header');
+                    columnDiv.appendChild(columnHeader);
+
+                    // Células de 0 a 9
+                    for (let numero = 0; numero <= 9; numero++) {
+                        const cell = document.createElement('div');
+                        cell.textContent = numero;
+                        cell.classList.add('cell');
+
+                        // Destaca o número sorteado
+                        if (data.dezenas[coluna] === numero.toString()) {
+                            cell.classList.add('highlight');
+                        }
+
+                        columnDiv.appendChild(cell);
+                    }
+
+                    gridDisplay.appendChild(columnDiv);
+                }
+
+                // Exibe o resultado na tela
+                resultInfo.style.display = 'block';
+            } catch (err) {
+                alert(err.message || 'Erro ao buscar o resultado. Tente novamente.');
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        // Função para carregar o último resultado quando a página é carregada
+        window.onload = function() {
+            buscarResultado();
+        };
+    </script>
+</body>
+</html>
